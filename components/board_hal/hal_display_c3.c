@@ -55,7 +55,9 @@ esp_err_t hal_display_init(void) {
         .buffer_size = LCD_HRES * 40,           // 2 буфера по 40 строк — ~38KB RAM
         .double_buffer = true,
         .hres = LCD_HRES, .vres = LCD_VRES,
-        .rotation = { .swap_xy = false, .mirror_x = false, .mirror_y = false },
+        // mirror применяет lvgl_port при add_disp (перетирает прямые вызовы esp_lcd_panel_mirror);
+        // панель VIEWE отзеркалена по X относительно дефолтного MADCTL GC9A01
+        .rotation = { .swap_xy = false, .mirror_x = true, .mirror_y = false },
         .flags = { .buff_dma = true },
     };
     s_disp = lvgl_port_add_disp(&dcfg);

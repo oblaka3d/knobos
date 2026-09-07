@@ -3,6 +3,7 @@
 #include "carousel.h"
 #include "hal.h"
 #include "esp_lvgl_port.h"
+#include "esp_log.h"
 
 extern const screen_desc_t screen_clock;
 static const screen_desc_t *s_screens[SCREEN_COUNT] = { &screen_clock };
@@ -20,6 +21,8 @@ void ui_init(void) {
 }
 
 void ui_handle_input(hal_input_event_t ev, void *arg) {
+    static const char *names[] = {"CW", "CCW", "SHORT", "LONG", "DOUBLE"};
+    ESP_LOGI("input", "%s", names[ev]);
     if (ev == HAL_IN_BTN_LONG) {
         int idx = carousel_next(&s_car);
         lvgl_port_lock(0);
