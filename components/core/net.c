@@ -17,7 +17,12 @@ static void on_event(void *arg, esp_event_base_t base, int32_t id, void *data) {
 }
 
 esp_err_t net_start_sta(const char *ssid, const char *pass) {
-    ESP_ERROR_CHECK(nvs_flash_init());
+    esp_err_t nvs_err = nvs_flash_init();
+    if (nvs_err == ESP_ERR_NVS_NO_FREE_PAGES || nvs_err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        nvs_err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(nvs_err);
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
