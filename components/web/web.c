@@ -145,6 +145,11 @@ static esp_err_t api_wifi_post_handler(httpd_req_t *req) {
     s_try_pass[sizeof(s_try_pass) - 1] = '\0';
     cJSON_Delete(json);
 
+    // До ответа сбросить detail от предыдущей попытки — иначе /api/wifi/status,
+    // опрошенный сразу после ответа (пока wifi_try_task ещё не стартовала), увидит
+    // старый WSM_AP+detail и poll() в portal.html примет его за "fail" этой попытки.
+    web_notify_wifi_state(WSM_AP_TRYING, "");
+
     // Ответ клиенту уходит до старта попытки: во время connect() AP-канал прыгает
     // за STA и телефон кратко теряет сеть — он должен успеть получить ответ и
     // дальше опрашивать /api/wifi/status самостоятельно.
@@ -154,6 +159,7 @@ static esp_err_t api_wifi_post_handler(httpd_req_t *req) {
     if (xTaskCreate(wifi_try_task, "wifi_try", WIFI_TRY_TASK_STACK, NULL, WIFI_TRY_TASK_PRIO, NULL) != pdPASS) {
         ESP_LOGE(TAG, "xTaskCreate(wifi_try_task) failed");
         atomic_store(&s_try_in_flight, false);
+        web_notify_wifi_state(WSM_AP, "failed to start connection attempt");
     }
     return ESP_OK;
 }
