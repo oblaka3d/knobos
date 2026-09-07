@@ -295,7 +295,10 @@ esp_err_t web_start_normal(void) {
     if (s_httpd) return ESP_OK; // идемпотентно; портал и normal делят один httpd_handle_t
 
     char web_pass[WEB_PASS_MAX_LEN] = "";
-    settings_get_str("web_pass", web_pass, sizeof(web_pass));
+    if (!settings_get_str("web_pass", web_pass, sizeof(web_pass)) || web_pass[0] == '\0') {
+        ESP_LOGE(TAG, "web_pass not set, refusing to start web UI");
+        return ESP_FAIL;
+    }
 
     char cred[AUTH_CRED_MAX_LEN];
     snprintf(cred, sizeof(cred), "admin:%s", web_pass);
