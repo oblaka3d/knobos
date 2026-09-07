@@ -1,5 +1,5 @@
 idf_component_register(SRCS "web.c" INCLUDE_DIRS "include"
-                       REQUIRES core dns_server json esp_http_server)
+                       REQUIRES core dns_server json esp_http_server esp_wifi mbedtls esp_app_format)
 
 # portal.html гзипуется на этапе сборки и встраивается как объект (Content-Encoding: gzip
 # отдаётся как есть, без распаковки на устройстве). Источник portal.html держим рядом для правок.
