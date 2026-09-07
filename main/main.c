@@ -11,11 +11,15 @@
 #include <stdbool.h>
 
 // Временный сброс WiFi кнопкой (M2; экран настроек придёт в M3): GPIO9 (инвертированная,
-// см. board_hal PIN_BTN), удержание 3с при включении стирает сохранённые креды.
+// см. board_hal PIN_BTN) — это strapping-пин ESP32-C3 (BOOT): удержание НИЗКОГО уровня
+// в момент подачи питания уводит чип в download mode, поэтому реагировать на удержание
+// ДО включения нельзя. Вместо этого — окно ожидания уже ПОСЛЕ старта: первые 2с ждём
+// начала нажатия, затем требуем 3с непрерывного удержания.
 // iot_button ещё не создан на этом этапе загрузки — используется прямой gpio_get_level.
 #define RESET_BTN_GPIO GPIO_NUM_9
 #define RESET_HOLD_POLL_MS 100
-#define RESET_HOLD_POLL_COUNT 30 // 30 * 100мс = 3с
+#define RESET_WAIT_START_POLL_COUNT 20 // 20 * 100мс = 2с окно ожидания начала нажатия
+#define RESET_HOLD_POLL_COUNT 30 // 30 * 100мс = 3с удержания
 
 static const char *TAG = "main";
 static bool s_sntp_started = false;
@@ -52,8 +56,11 @@ static void on_wifi_status(wifi_sm_state_t st, const char *detail) {
     }
 }
 
-// Кнопка GPIO9 удерживается непрерывно 3с при включении -> сброс сохранённых WiFi-кредов
-// (устройство уйдёт в AP-онбординг). Отпустил раньше -> выходим без изменений.
+// Окно сброса кредов ПОСЛЕ старта (GPIO9 — strapping BOOT-пин, реагировать на удержание
+// до/во время подачи питания нельзя — уведёт в download mode). Первые 2с после старта
+// ждём начала нажатия (честные 2с на каждой загрузке — сократить окно нельзя, т.к. кнопку
+// могут нажать под конец окна); если нажатие началось — с этого момента требуем 3с
+// непрерывного удержания. Отпустил раньше -> отмена, обычная загрузка без сброса.
 static void reset_wifi_if_button_held(void) {
     const gpio_config_t cfg = {
         .pin_bit_mask = 1ULL << RESET_BTN_GPIO,
@@ -64,14 +71,22 @@ static void reset_wifi_if_button_held(void) {
     };
     gpio_config(&cfg);
 
-    if (gpio_get_level(RESET_BTN_GPIO) != 0) return; // не нажата
+    bool press_started = false;
+    for (int i = 0; i < RESET_WAIT_START_POLL_COUNT; i++) {
+        vTaskDelay(pdMS_TO_TICKS(RESET_HOLD_POLL_MS));
+        if (gpio_get_level(RESET_BTN_GPIO) == 0) {
+            press_started = true;
+            break;
+        }
+    }
+    if (!press_started) return; // за 2с не начали жать — обычная загрузка
 
     for (int i = 0; i < RESET_HOLD_POLL_COUNT; i++) {
         vTaskDelay(pdMS_TO_TICKS(RESET_HOLD_POLL_MS));
         if (gpio_get_level(RESET_BTN_GPIO) != 0) return; // отпустили — без сброса
     }
 
-    ESP_LOGW(TAG, "reset button held 3s at boot — erasing WiFi credentials");
+    ESP_LOGW(TAG, "reset button held 3s within post-boot window — erasing WiFi credentials");
     settings_erase_key("wifi_ssid");
     settings_erase_key("wifi_pass");
 }
@@ -79,7 +94,7 @@ static void reset_wifi_if_button_held(void) {
 void app_main(void) {
     ESP_ERROR_CHECK(hal_display_init());
 
-    settings_init();
+    ESP_ERROR_CHECK(settings_init());
     reset_wifi_if_button_held();
 
     ui_init();

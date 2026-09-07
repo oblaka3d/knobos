@@ -219,8 +219,18 @@ esp_err_t wifi_mgr_try_credentials(const char *ssid, const char *pass) {
     EventBits_t bits = xEventGroupWaitBits(s_wifi_ev, WIFI_EV_GOT_IP, pdFALSE, pdFALSE, pdMS_TO_TICKS(TRY_CREDENTIALS_TIMEOUT_MS));
     if (!(bits & WIFI_EV_GOT_IP)) bits = xEventGroupGetBits(s_wifi_ev); // закрыть гонку таймаут/GOT_IP
     if (bits & WIFI_EV_GOT_IP) {
-        settings_set_str("wifi_ssid", ssid);
-        settings_set_str("wifi_pass", pass);
+        esp_err_t ssid_err = settings_set_str("wifi_ssid", ssid);
+        esp_err_t pass_err = settings_set_str("wifi_pass", pass);
+        if (ssid_err != ESP_OK || pass_err != ESP_OK) {
+            // Подключились, но креды не сохранились в NVS — без этой проверки портал
+            // показал бы "Готово" (см. WSM_STA_OK), а после ребута устройство снова
+            // ушло бы в AP без сохранённых кредов. Сообщаем об ошибке напрямую через
+            // cb, не через transition() — реальное состояние Wi-Fi (уже STA_OK) не меняем.
+            ESP_LOGE(TAG, "failed to save wifi credentials: ssid=%s pass=%s",
+                     esp_err_to_name(ssid_err), esp_err_to_name(pass_err));
+            if (s_status_cb) s_status_cb(WSM_AP, "failed to save settings");
+            return ESP_FAIL;
+        }
         ESP_ERROR_CHECK(esp_timer_start_once(s_restart_timer, (uint64_t)RESTART_DELAY_MS * 1000));
         return ESP_OK;
     }
