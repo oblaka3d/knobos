@@ -244,6 +244,27 @@ const char *wifi_mgr_ip(void) { return s_ip; }
 const char *wifi_mgr_ap_ssid(void) { return s_ap_ssid; }
 const char *wifi_mgr_ap_pass(void) { return s_ap_pass; }
 
+// SSID соседних сетей — недоверенные данные, попадают в JSON как строковое значение.
+// Экранирует " и \ и управляющие символы <0x20 (как \u00XX), иначе битый JSON при кавычке/бэкслеше в SSID.
+#define ESCAPED_SSID_MAX 200 // худший случай: 32 байта SSID * \u00XX (6 симв.) + '\0'
+static void json_escape_ssid(const char *ssid, char *out, size_t out_len) {
+    size_t pos = 0;
+    for (size_t i = 0; ssid[i] != '\0' && pos + 1 < out_len; i++) {
+        unsigned char c = (unsigned char)ssid[i];
+        if (c == '"' || c == '\\') {
+            if (pos + 2 >= out_len) break;
+            out[pos++] = '\\';
+            out[pos++] = (char)c;
+        } else if (c < 0x20) {
+            if (pos + 6 >= out_len) break;
+            pos += (size_t)snprintf(out + pos, out_len - pos, "\\u%04x", c);
+        } else {
+            out[pos++] = (char)c;
+        }
+    }
+    out[pos] = '\0';
+}
+
 esp_err_t wifi_mgr_scan_json(char *out, size_t out_len) {
     if (!out || out_len < 3) return ESP_ERR_INVALID_ARG; // минимум место под "[]" + '\0'
 
@@ -288,8 +309,10 @@ esp_err_t wifi_mgr_scan_json(char *out, size_t out_len) {
         if (pos + 2 >= out_len) break; // не осталось места даже под "]" + '\0'
         size_t avail = out_len - pos - 2; // зарезервировать ']' + '\0'
         bool secure = records[i].authmode != WIFI_AUTH_OPEN;
+        char escaped_ssid[ESCAPED_SSID_MAX];
+        json_escape_ssid((const char *)records[i].ssid, escaped_ssid, sizeof(escaped_ssid));
         int written = snprintf(out + pos, avail + 1, "%s{\"ssid\":\"%s\",\"rssi\":%d,\"secure\":%s}",
-                                i == 0 ? "" : ",", records[i].ssid, records[i].rssi, secure ? "true" : "false");
+                                i == 0 ? "" : ",", escaped_ssid, records[i].rssi, secure ? "true" : "false");
         if (written < 0 || (size_t)written > avail) break; // не влезло — не портим JSON частичной записью
         pos += (size_t)written;
     }

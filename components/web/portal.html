@@ -1,0 +1,51 @@
+<!doctype html><html lang="ru"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Knob — настройка WiFi</title>
+<style>
+body{font-family:system-ui;background:#111;color:#eee;margin:0;padding:24px;max-width:420px;margin-inline:auto}
+h1{font-size:20px}button,input{font-size:16px;padding:10px;border-radius:8px;border:1px solid #444;background:#222;color:#eee;width:100%;box-sizing:border-box;margin-top:8px}
+button{background:#2f6fed;border:0;cursor:pointer}.net{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #333;cursor:pointer}
+.net:hover{background:#1a1a1a}#status{margin-top:16px;color:#ffb000}.hidden{display:none}
+</style>
+<h1>Подключение Knob к WiFi</h1>
+<div id="list">Ищу сети…</div>
+<div id="form" class="hidden">
+  <p id="chosen"></p>
+  <input id="pass" type="password" placeholder="Пароль сети">
+  <button onclick="connect()">Подключить</button>
+  <button onclick="back()" style="background:#333">Назад</button>
+</div>
+<p id="status"></p>
+<script>
+let ssid='';
+async function scan(){
+  try{
+    const r=await fetch('/api/wifi/scan');const nets=await r.json();
+    const list=document.getElementById('list');
+    list.textContent='';
+    if(!nets.length){list.textContent='Сетей не найдено';return}
+    nets.forEach(n=>{
+      const row=document.createElement('div');row.className='net';
+      const name=document.createElement('span');name.textContent=n.ssid;
+      const info=document.createElement('span');info.textContent=n.rssi+' dBm'+(n.secure?' 🔒':'');
+      row.appendChild(name);row.appendChild(info);
+      row.addEventListener('click',()=>pick(n.ssid));
+      list.appendChild(row);
+    });
+  }catch(e){document.getElementById('list').textContent='Ошибка скана, обновите страницу'}}
+function pick(s){ssid=s;document.getElementById('chosen').textContent=s;
+  document.getElementById('list').classList.add('hidden');document.getElementById('form').classList.remove('hidden')}
+function back(){document.getElementById('form').classList.add('hidden');document.getElementById('list').classList.remove('hidden')}
+async function connect(){
+  document.getElementById('status').textContent='Подключаю…';
+  await fetch('/api/wifi',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ssid,pass:document.getElementById('pass').value})});
+  poll()}
+async function poll(){
+  try{const r=await fetch('/api/wifi/status');const s=await r.json();
+    if(s.state==='ok'){document.getElementById('status').textContent='Готово! Устройство перезагружается и подключается к вашей сети.';return}
+    if(s.state==='fail'){document.getElementById('status').textContent='Не вышло: '+s.detail+'. Попробуйте ещё раз.';return}
+  }catch(e){/* девайс мог ребутнуться */}
+  setTimeout(poll,1000)}
+scan();
+</script></html>
