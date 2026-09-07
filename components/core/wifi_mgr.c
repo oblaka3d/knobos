@@ -187,15 +187,17 @@ esp_err_t wifi_mgr_start(wifi_mgr_status_cb_t cb) {
         EventBits_t bits = xEventGroupWaitBits(s_wifi_ev, WIFI_EV_GOT_IP, pdFALSE, pdFALSE, pdMS_TO_TICKS(STA_CONNECT_TIMEOUT_MS));
         if (!(bits & WIFI_EV_GOT_IP)) bits = xEventGroupGetBits(s_wifi_ev); // закрыть гонку таймаут/GOT_IP
         if (!(bits & WIFI_EV_GOT_IP)) {
-            transition(WSM_EV_STA_FAIL, "sta timeout");
             uint8_t mac[6];
             esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+            ensure_ap_creds(mac); // до transition — колбэк (ui_onboarding_show) читает wifi_mgr_ap_ssid/pass сразу
+            transition(WSM_EV_STA_FAIL, "sta timeout");
             bring_up_ap(mac);
         }
     } else {
-        transition(WSM_EV_NO_CREDS, "");
         uint8_t mac[6];
         esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP);
+        ensure_ap_creds(mac); // до transition — колбэк (ui_onboarding_show) читает wifi_mgr_ap_ssid/pass сразу
+        transition(WSM_EV_NO_CREDS, "");
         bring_up_ap(mac);
     }
     return ESP_OK;

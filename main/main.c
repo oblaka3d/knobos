@@ -11,9 +11,25 @@ static bool s_sntp_started = false;
 
 static void on_wifi_status(wifi_sm_state_t st, const char *detail) {
     ESP_LOGI(TAG, "wifi state=%d detail=%s", st, detail);
-    if (st == WSM_STA_OK && !s_sntp_started) {
-        s_sntp_started = true;
-        net_start_sntp("MSK-3");
+    switch (st) {
+    case WSM_AP:
+        // show идемпотентен (лениво создаёт экран один раз, ssid/pass не меняются);
+        // detail непустой после TRY_FAIL (или "sta timeout") — перекрывает статус-строку ошибкой.
+        ui_onboarding_show(wifi_mgr_ap_ssid(), wifi_mgr_ap_pass());
+        if (detail && detail[0]) ui_onboarding_status(detail);
+        break;
+    case WSM_AP_TRYING:
+        ui_onboarding_status("Connecting...");
+        break;
+    case WSM_STA_OK:
+        ui_onboarding_hide();
+        if (!s_sntp_started) {
+            s_sntp_started = true;
+            net_start_sntp("MSK-3");
+        }
+        break;
+    default:
+        break;
     }
 }
 
