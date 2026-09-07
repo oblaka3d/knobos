@@ -1,0 +1,8 @@
+menu "Knobos dev"
+config KNOBOS_DEV_WIFI_SSID
+    string "Dev WiFi SSID"
+    default ""
+config KNOBOS_DEV_WIFI_PASS
+    string "Dev WiFi password"
+    default ""
+endmenu
