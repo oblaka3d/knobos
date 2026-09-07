@@ -118,13 +118,18 @@ static esp_err_t api_wifi_post_handler(httpd_req_t *req) {
     }
 
     char body[POST_BODY_MAX_LEN + 1];
-    int received = httpd_req_recv(req, body, req->content_len);
-    if (received <= 0) {
-        atomic_store(&s_try_in_flight, false);
-        httpd_resp_send_500(req);
-        return ESP_FAIL;
+    int total = req->content_len;
+    int cur = 0;
+    while (cur < total) {
+        int r = httpd_req_recv(req, body + cur, total - cur);
+        if (r <= 0) {
+            atomic_store(&s_try_in_flight, false);
+            httpd_resp_send_500(req);
+            return ESP_FAIL;
+        }
+        cur += r;
     }
-    body[received] = '\0';
+    body[cur] = '\0';
 
     cJSON *json = cJSON_Parse(body);
     const cJSON *ssid_item = json ? cJSON_GetObjectItemCaseSensitive(json, "ssid") : NULL;
