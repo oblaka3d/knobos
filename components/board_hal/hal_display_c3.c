@@ -58,7 +58,7 @@ esp_err_t hal_display_init(void) {
         // mirror применяет lvgl_port при add_disp (перетирает прямые вызовы esp_lcd_panel_mirror);
         // панель VIEWE отзеркалена по X относительно дефолтного MADCTL GC9A01
         .rotation = { .swap_xy = false, .mirror_x = true, .mirror_y = false },
-        .flags = { .buff_dma = true },
+        .flags = { .buff_dma = true, .swap_bytes = true },  // RGB565 big-endian для SPI-панели: без свопа серые полутона AA дают цветной мусор
     };
     s_disp = lvgl_port_add_disp(&dcfg);
     return s_disp ? ESP_OK : ESP_FAIL;
