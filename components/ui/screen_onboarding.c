@@ -38,16 +38,20 @@ lv_obj_t *screen_onboarding_create(void) {
     s_pass_label = lv_label_create(scr);
     lv_obj_set_style_text_font(s_pass_label, &lv_font_montserrat_20, 0);
     lv_obj_set_style_text_color(s_pass_label, lv_color_white(), 0);
-    lv_obj_align(s_pass_label, LV_ALIGN_CENTER, 0, 72);
+    // y=64, а не 72 — освобождает вертикальный зазор до статус-лейбла (см. ниже), который
+    // теперь поднят и шире по высоте (двухстрочные тексты ошибок wifi_mgr).
+    lv_obj_align(s_pass_label, LV_ALIGN_CENTER, 0, 64);
 
-    // montserrat_14 — дефолтный шрифт LVGL (CONFIG_LV_FONT_DEFAULT_MONTSERRAT_14), не задаём явно.
     s_status_label = lv_label_create(scr);
+    lv_obj_set_style_text_font(s_status_label, &lv_font_montserrat_16, 0);
     lv_obj_set_style_text_color(s_status_label, lv_color_hex(0xAAAAAA), 0);
-    lv_obj_set_width(s_status_label, 200);
+    lv_obj_set_width(s_status_label, 170);
     lv_obj_set_style_text_align(s_status_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_long_mode(s_status_label, LV_LABEL_LONG_WRAP);
-    lv_label_set_text(s_status_label, "Join AP, open 192.168.4.1");
-    lv_obj_align(s_status_label, LV_ALIGN_BOTTOM_MID, 0, -10);
+    lv_label_set_text(s_status_label, "Open 192.168.4.1");
+    // y=-24, а не -10 — на круглом экране хорда у самого низа круга слишком узкая для строки
+    // текста; выше строка помещается без обрезки по краям.
+    lv_obj_align(s_status_label, LV_ALIGN_BOTTOM_MID, 0, -24);
 
     return scr;
 }
