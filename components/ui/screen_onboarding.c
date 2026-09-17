@@ -1,6 +1,7 @@
 #include "hal.h"
 #include "lvgl.h"
 #include "ids.h"
+#include "board_ui.h"
 #include <string.h>
 
 // Экран онбординга — SSID/пароль AP + QR + статус. Вне карусели (screens.h), не screen_desc_t:
@@ -16,42 +17,42 @@ lv_obj_t *screen_onboarding_create(void) {
     lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
 
     lv_obj_t *title = lv_label_create(scr);
-    lv_obj_set_style_text_font(title, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(title, UI_FONT_M, 0);
     lv_obj_set_style_text_color(title, lv_color_hex(0x888888), 0);
     lv_label_set_text(title, "Setup WiFi");
-    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 18);
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, UI_S(18));
 
     s_qr = lv_qrcode_create(scr);
-    lv_qrcode_set_size(s_qr, 120);
+    lv_qrcode_set_size(s_qr, UI_S(120));
     lv_qrcode_set_dark_color(s_qr, lv_color_black());
     lv_qrcode_set_light_color(s_qr, lv_color_white());
-    lv_obj_align(s_qr, LV_ALIGN_CENTER, 0, -20);
+    lv_obj_align(s_qr, LV_ALIGN_CENTER, 0, UI_S(-20));
 
     // lv_obj_align_to(отн. QR) не подходит: в момент создания label пуст (0×0), а координата
     // фиксируется один раз и не пересчитывается после set_text — используем ALIGN_CENTER
     // с фиксированными offset'ами (тот же приём, что screen_clock.c).
     s_ssid_label = lv_label_create(scr);
-    lv_obj_set_style_text_font(s_ssid_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_ssid_label, UI_FONT_M, 0);
     lv_obj_set_style_text_color(s_ssid_label, lv_color_white(), 0);
-    lv_obj_align(s_ssid_label, LV_ALIGN_CENTER, 0, 50);
+    lv_obj_align(s_ssid_label, LV_ALIGN_CENTER, 0, UI_S(50));
 
     s_pass_label = lv_label_create(scr);
-    lv_obj_set_style_text_font(s_pass_label, &lv_font_montserrat_20, 0);
+    lv_obj_set_style_text_font(s_pass_label, UI_FONT_M, 0);
     lv_obj_set_style_text_color(s_pass_label, lv_color_white(), 0);
     // y=64, а не 72 — освобождает вертикальный зазор до статус-лейбла (см. ниже), который
     // теперь поднят и шире по высоте (двухстрочные тексты ошибок wifi_mgr).
-    lv_obj_align(s_pass_label, LV_ALIGN_CENTER, 0, 64);
+    lv_obj_align(s_pass_label, LV_ALIGN_CENTER, 0, UI_S(64));
 
     s_status_label = lv_label_create(scr);
-    lv_obj_set_style_text_font(s_status_label, &lv_font_montserrat_16, 0);
+    lv_obj_set_style_text_font(s_status_label, UI_FONT_S, 0);
     lv_obj_set_style_text_color(s_status_label, lv_color_hex(0xAAAAAA), 0);
-    lv_obj_set_width(s_status_label, 170);
+    lv_obj_set_width(s_status_label, UI_S(170));
     lv_obj_set_style_text_align(s_status_label, LV_TEXT_ALIGN_CENTER, 0);
     lv_label_set_long_mode(s_status_label, LV_LABEL_LONG_WRAP);
     lv_label_set_text(s_status_label, "Open 192.168.4.1");
     // y=-24, а не -10 — на круглом экране хорда у самого низа круга слишком узкая для строки
     // текста; выше строка помещается без обрезки по краям.
-    lv_obj_align(s_status_label, LV_ALIGN_BOTTOM_MID, 0, -24);
+    lv_obj_align(s_status_label, LV_ALIGN_BOTTOM_MID, 0, UI_S(-24));
 
     return scr;
 }

@@ -37,6 +37,22 @@ idf.py -B build.c3 -p /dev/cu.usbmodem21301 flash monitor
 одна `factory`-секция (OTA-слоты появятся в M4). Менять только осознанно,
 чтобы не сдвинуть адреса.
 
+## Регенерация шрифтов
+
+На S3 (466×466) UI использует крупные шрифты Montserrat, сгенерённые из TTF
+через `lv_font_conv` (`components/ui/fonts/font_m32.c` / `font_m40.c` /
+`font_m56.c` / `font_m96.c`, подключаются только при `CONFIG_KNOBOS_BOARD_S3`
+— см. `components/ui/CMakeLists.txt` и `components/ui/include/board_ui.h`).
+На C3 (240×240) те же роли (`UI_FONT_XL/L/M/S`) занимают встроенные
+`lv_font_montserrat_*` из Kconfig (`sdkconfig.defaults.c3`).
+
+Сгенерённые `.c` коммитятся в репозиторий; исходный TTF — нет. Регенерация
+нужна только при смене набора размеров/диапазона символов:
+
+```bash
+tools/gen_fonts.sh   # требует node/npm (npx); скачивает Montserrat-Regular.ttf во временный каталог
+```
+
 ## Первое включение
 
 На чистом устройстве (пустой NVS) на экране появляется онбординг с QR-кодом.

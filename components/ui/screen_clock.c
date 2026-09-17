@@ -1,5 +1,6 @@
 #include "screens.h"
 #include "hal.h"
+#include "board_ui.h"
 #include <time.h>
 
 static lv_obj_t *s_time_label, *s_date_label;
@@ -20,12 +21,13 @@ static lv_obj_t *create(void) {
     lv_obj_set_style_bg_color(scr, lv_color_black(), 0);
     s_time_label = lv_label_create(scr);
     lv_obj_set_style_text_color(s_time_label, lv_color_white(), 0);
-    lv_obj_set_style_text_font(s_time_label, &lv_font_montserrat_48, 0);
-    lv_obj_align(s_time_label, LV_ALIGN_CENTER, 0, -10);
+    lv_obj_set_style_text_font(s_time_label, UI_FONT_XL, 0);
+    lv_obj_align(s_time_label, LV_ALIGN_CENTER, 0, UI_S(-10));
     lv_label_set_text(s_time_label, "--:--");
     s_date_label = lv_label_create(scr);
     lv_obj_set_style_text_color(s_date_label, lv_color_hex(0x888888), 0);
-    lv_obj_align(s_date_label, LV_ALIGN_CENTER, 0, 40);
+    lv_obj_set_style_text_font(s_date_label, UI_FONT_S, 0);
+    lv_obj_align(s_date_label, LV_ALIGN_CENTER, 0, UI_S(40));
     lv_label_set_text(s_date_label, "");
     lv_timer_create(tick_cb, 1000, NULL);
     return scr;
