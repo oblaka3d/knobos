@@ -4,19 +4,20 @@
 #include "settings.h"
 #include "wifi_mgr.h"
 #include "web.h"
+#include "board_pins.h"
 #include "esp_log.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <stdbool.h>
 
-// Временный сброс WiFi кнопкой (M2; экран настроек придёт в M3): GPIO9 (инвертированная,
-// см. board_hal PIN_BTN) — это strapping-пин ESP32-C3 (BOOT): удержание НИЗКОГО уровня
-// в момент подачи питания уводит чип в download mode, поэтому реагировать на удержание
+// Временный сброс WiFi кнопкой (M2; экран настроек придёт в M3): board_hal PIN_BTN
+// (инвертированная; GPIO9 на C3, GPIO0 на S3) — это strapping-пин BOOT на обеих платах:
+// удержание НИЗКОГО уровня в момент подачи питания уводит чип в download mode, поэтому реагировать на удержание
 // ДО включения нельзя. Вместо этого — окно ожидания уже ПОСЛЕ старта: первые 2с ждём
 // начала нажатия, затем требуем 3с непрерывного удержания.
 // iot_button ещё не создан на этом этапе загрузки — используется прямой gpio_get_level.
-#define RESET_BTN_GPIO GPIO_NUM_9
+#define RESET_BTN_GPIO ((gpio_num_t)PIN_BTN)
 #define RESET_HOLD_POLL_MS 100
 #define RESET_WAIT_START_POLL_COUNT 20 // 20 * 100мс = 2с окно ожидания начала нажатия
 #define RESET_HOLD_POLL_COUNT 30 // 30 * 100мс = 3с удержания
