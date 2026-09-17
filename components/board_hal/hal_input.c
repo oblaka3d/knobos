@@ -1,11 +1,9 @@
 #include "hal.h"
+#include "board_pins.h"
 #include "iot_knob.h"
 #include "iot_button.h"
 #include "button_gpio.h"
 
-#define PIN_ENC_A 6
-#define PIN_ENC_B 7
-#define PIN_BTN   9
 #define LONG_PRESS_MS  600
 #define SHORT_PRESS_MS 400
 

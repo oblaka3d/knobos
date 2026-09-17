@@ -1,4 +1,5 @@
 #include "hal.h"
+#include "board_pins.h"
 #include "driver/spi_master.h"
 #include "driver/ledc.h"
 #include "esp_lcd_panel_io.h"
@@ -6,12 +7,6 @@
 #include "esp_lcd_gc9a01.h"
 #include "esp_lvgl_port.h"
 
-#define PIN_SCLK 1
-#define PIN_MOSI 0
-#define PIN_CS 10
-#define PIN_DC 4
-#define PIN_RST 2
-#define PIN_BL 8
 #define LCD_HRES 240
 #define LCD_VRES 240
 #define LCD_SPI_HOST SPI2_HOST

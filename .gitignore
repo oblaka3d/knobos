@@ -1,4 +1,6 @@
 build/
+build.c3/
+build.s3/
 build-host/
 sdkconfig
 sdkconfig.old

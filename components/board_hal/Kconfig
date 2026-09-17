@@ -1,0 +1,13 @@
+choice KNOBOS_BOARD
+    prompt "Плата knobos (пины + HAL дисплея)"
+    default KNOBOS_BOARD_C3
+    help
+        Выбирает набор пинов из components/board_hal/include/boards/<board>.h
+        и HAL-реализацию дисплея (hal_display_c3.c / hal_display_s3.c).
+
+    config KNOBOS_BOARD_C3
+        bool "ESP32-C3 — VIEWE UEDX24240013-MD50E (GC9A01 240x240)"
+
+    config KNOBOS_BOARD_S3
+        bool "ESP32-S3 — VIEWE UEDX46460015-MD50E (AMOLED CO5300 466x466, дисплей — стаб)"
+endchoice
