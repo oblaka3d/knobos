@@ -5,10 +5,22 @@
 ESP32-S3 UEDX46460015-MD50E (AMOLED, дисплей пока стаб). Полная
 спецификация — [`docs/spec.md`](docs/spec.md).
 
-## Сборка под платы
+## Платы
 
-Каждая плата собирается в свою папку сборки со своим набором
-`sdkconfig.defaults.<board>` (пины, таргет, партиции, флеш):
+Поддерживаются две платы VIEWE с круглым дисплеем:
+
+| Параметр | C3 | S3 |
+|----------|----|----|
+| **Модель** | UEDX24240013-MD50E | UEDX46460015-MD50E |
+| **Дисплей** | GC9A01, 240×240, SPI | AMOLED CO5300, 466×466, QSPI |
+| **Flash** | 4MB | 16MB |
+| **PSRAM** | нет | 8MB Octal |
+| **Тачскрин** | нет | CST820 |
+| **Статус** | готово | стаб (дисплей) |
+
+### Команды сборки
+
+Каждая плата собирается в свою папку со своим набором `sdkconfig.defaults.<board>`:
 
 ```bash
 . ~/esp/esp-idf/export.sh
@@ -16,10 +28,21 @@ idf.py -B build.c3 -DSDKCONFIG=build.c3/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfi
 idf.py -B build.s3 -DSDKCONFIG=build.s3/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfig.defaults;sdkconfig.defaults.s3" build
 ```
 
-- C3 — VIEWE UEDX24240013-MD50E, GC9A01 240×240, 4MB flash, без PSRAM.
-- S3 — VIEWE UEDX46460015-MD50E, AMOLED CO5300/SH8601 466×466 QSPI, тач
-  CST820, 16MB flash, 8MB Octal PSRAM. Дисплей — стаб (`ESP_ERR_NOT_SUPPORTED`)
-  до отдельной задачи с реализацией.
+### Яркость дисплея
+
+На **C3** яркость регулируется через LEDC (PWM импульс):
+```c
+// hal_display_c3.c
+esp_lcd_panel_disp_on_off(panel_handle, brightness != 0);
+ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, brightness);
+```
+
+На **S3** яркость устанавливается командой дисплея 0x51:
+```c
+// board_ui.c
+uint8_t brightness_cmd[] = {0x51, brightness};
+esp_lcd_panel_io_tx_param(io_handle, 0x51, brightness);
+```
 
 ## Прошивка
 
