@@ -95,6 +95,17 @@ static void reset_wifi_if_button_held(void) {
 void app_main(void) {
     ESP_ERROR_CHECK(hal_display_init());
 
+    // NOT_SUPPORTED на C3 — норма (нет тача физически), не паника; любая другая
+    // ошибка на S3 логируется, но не блокирует загрузку (UX без тача не меняется).
+    esp_err_t touch_err = hal_touch_init();
+    if (touch_err == ESP_OK) {
+        ESP_LOGI(TAG, "touch: ready");
+    } else if (touch_err == ESP_ERR_NOT_SUPPORTED) {
+        ESP_LOGI(TAG, "touch: not supported on this board");
+    } else {
+        ESP_LOGE(TAG, "touch: init failed: %s", esp_err_to_name(touch_err));
+    }
+
     ESP_ERROR_CHECK(settings_init());
     reset_wifi_if_button_held();
 

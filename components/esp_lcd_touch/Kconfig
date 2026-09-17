@@ -1,0 +1,27 @@
+# Task 4 (M2.5, knobos): vendored verbatim from espressif/esp-bsp — merges the
+# two upstream Kconfig files (esp_lcd_touch + esp_lcd_touch_cst816s) since
+# both live in one component here. See esp_lcd_touch.c for provenance.
+
+menu "ESP LCD TOUCH"
+
+    config ESP_LCD_TOUCH_MAX_POINTS
+        int "Maximum count of the touch points"
+        range 1 10
+        default 5
+
+    config ESP_LCD_TOUCH_MAX_BUTTONS
+        int "Maximum count of the touch buttons supported"
+        range 0 10
+        default 1
+
+endmenu
+
+menu "ESP LCD TOUCH - CST816S"
+
+    config ESP_LCD_TOUCH_CST816S_DISABLE_READ_ID
+        bool "Disable reading ID during initialization"
+        default n
+        help
+            For some CST816 series chips, reading ID may cause initialization failure.
+
+endmenu
