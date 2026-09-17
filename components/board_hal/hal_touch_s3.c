@@ -46,6 +46,10 @@ static void touch_log_coords(esp_lcd_touch_handle_t tp, uint16_t *x, uint16_t *y
 esp_err_t hal_touch_init(void) {
     esp_log_level_set(TAG, ESP_LOG_DEBUG);
 
+    // Шина создаётся здесь и полностью принадлежит тачу (единственный
+    // потребитель I2C на этих пинах на сегодня) — при добавлении второго
+    // I2C-устройства на SDA=1/SCL=3 вынести создание шины в отдельный
+    // hal_i2c-модуль с общим хэндлом, а не дублировать i2c_new_master_bus.
     i2c_master_bus_config_t bus_cfg = {
         .i2c_port = -1,
         .sda_io_num = PIN_TOUCH_SDA,
@@ -73,7 +77,7 @@ esp_err_t hal_touch_init(void) {
     err = esp_lcd_new_panel_io_i2c(bus, &io_cfg, &io);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "panel io i2c failed: %s", esp_err_to_name(err));
-        return err;
+        goto err_bus;
     }
 
     esp_lcd_touch_config_t touch_cfg = {
@@ -89,17 +93,28 @@ esp_err_t hal_touch_init(void) {
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "CST820 init failed (RST=%d INT=%d): %s", (int)PIN_TOUCH_RST, (int)PIN_TOUCH_INT,
                  esp_err_to_name(err));
-        return err;
+        goto err_io;
     }
 
     lvgl_port_touch_cfg_t lv_touch_cfg = { .disp = hal_lv_display(), .handle = tp };
     lv_indev_t *indev = lvgl_port_add_touch(&lv_touch_cfg);
     if (!indev) {
         ESP_LOGE(TAG, "lvgl_port_add_touch failed");
-        return ESP_FAIL;
+        err = ESP_FAIL;
+        goto err_touch;
     }
 
     ESP_LOGI(TAG, "touch CST820 ready (addr 0x%02X, RST=%d INT=%d)", TOUCH_CST820_I2C_ADDR, (int)PIN_TOUCH_RST,
              (int)PIN_TOUCH_INT);
     return ESP_OK;
+
+    // Цепочка cleanup на любой провал ниже создания шины — устройство должно
+    // продолжать работать без тача, а не течь I2C-хэндлами/GPIO-конфигом.
+err_touch:
+    esp_lcd_touch_del(tp);
+err_io:
+    esp_lcd_panel_io_del(io);
+err_bus:
+    i2c_del_master_bus(bus);
+    return err;
 }
