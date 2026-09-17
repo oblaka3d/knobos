@@ -1,8 +1,8 @@
 # knobos
 
 Своя прошивка (ESP-IDF) для круглой крутилки VIEWE. Поддерживаются две платы
-(см. «Сборка под платы»): ESP32-C3 UEDX24240013-MD50E (готово) и
-ESP32-S3 UEDX46460015-MD50E (AMOLED, дисплей пока стаб). Полная
+(см. «Платы»): ESP32-C3 UEDX24240013-MD50E (готово) и
+ESP32-S3 UEDX46460015-MD50E (AMOLED, готово). Полная
 спецификация — [`docs/spec.md`](docs/spec.md).
 
 ## Платы
@@ -16,7 +16,7 @@ ESP32-S3 UEDX46460015-MD50E (AMOLED, дисплей пока стаб). Полн
 | **Flash** | 4MB | 16MB |
 | **PSRAM** | нет | 8MB Octal |
 | **Тачскрин** | нет | CST820 |
-| **Статус** | готово | стаб (дисплей) |
+| **Статус** | готово | готово |
 
 ### Команды сборки
 
@@ -30,19 +30,17 @@ idf.py -B build.s3 -DSDKCONFIG=build.s3/sdkconfig -DSDKCONFIG_DEFAULTS="sdkconfi
 
 ### Яркость дисплея
 
-На **C3** яркость регулируется через LEDC (PWM импульс):
-```c
-// hal_display_c3.c
-esp_lcd_panel_disp_on_off(panel_handle, brightness != 0);
-ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, brightness);
-```
+На **C3** яркость регулируется ШИМ подсветки — LEDC-канал на GPIO8,
+инвертированный (0% duty = максимум яркости), см.
+`components/board_hal/hal_display_c3.c`.
 
-На **S3** яркость устанавливается командой дисплея 0x51:
-```c
-// board_ui.c
-uint8_t brightness_cmd[] = {0x51, brightness};
-esp_lcd_panel_io_tx_param(io_handle, 0x51, brightness);
-```
+На **S3** (AMOLED) яркость устанавливается командой дисплея WRDISBV (0x51)
+через panel IO — `co5300_set_brightness()` в
+`components/board_hal/co5300/esp_lcd_co5300.c`, вызывается из
+`components/board_hal/hal_display_s3.c`.
+
+Обе платы используют общий интерфейс `hal_backlight_set(percent)`
+(`components/board_hal/include/hal.h`), реализация платозависима.
 
 ## Прошивка
 

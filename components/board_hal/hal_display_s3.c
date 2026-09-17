@@ -108,6 +108,11 @@ esp_err_t hal_display_init(void) {
     ESP_ERROR_CHECK(esp_lcd_panel_set_gap(panel, LCD_X_GAP, LCD_Y_GAP));
     ESP_ERROR_CHECK(esp_lcd_panel_disp_on_off(panel, true));
 
+    // Стартовая яркость — до lvgl_port_init/add_disp: панель уже готова принимать
+    // команды, а LVGL-таск ещё не поднят и не флашит первый кадр, так что tx_param
+    // команды WRDISBV не может встрять между транзакциями первого QSPI-флаша.
+    hal_backlight_set(80);
+
     const lvgl_port_cfg_t lv_cfg = ESP_LVGL_PORT_INIT_CONFIG();
     ESP_ERROR_CHECK(lvgl_port_init(&lv_cfg));
     const lvgl_port_display_cfg_t dcfg = {
@@ -128,7 +133,6 @@ esp_err_t hal_display_init(void) {
     ESP_LOGI(TAG, "heap_free=%lu internal_free=%lu psram_size=%u", (unsigned long)esp_get_free_heap_size(),
              (unsigned long)heap_caps_get_free_size(MALLOC_CAP_INTERNAL), (unsigned)esp_psram_get_size());
 
-    hal_backlight_set(80);
     return s_disp ? ESP_OK : ESP_FAIL;
 }
 
