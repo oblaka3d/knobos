@@ -23,6 +23,7 @@
 #include "driver/gpio.h"
 #include "esp_check.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_lcd_panel_interface.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_vendor.h"
@@ -292,6 +293,23 @@ static esp_err_t panel_co5300_init(esp_lcd_panel_t *panel)
     return ESP_OK;
 }
 
+// Если tx_param/tx_color здесь (CASET/RASET/RAMWR) исчерпают ретраи (см.
+// CO5300_IO_RETRY_MAX), esp_lvgl_port для LVGL9 всё равно не проверяет код
+// возврата esp_lcd_panel_draw_bitmap() и не позовёт lv_disp_flush_ready() сам —
+// on_color_trans_done не придёт (цветовая транзакция либо не отправлена вовсе,
+// либо отправлена без корректного окна CASET/RASET), и taskLVGL зависнет в
+// wait_for_flushing() НАВСЕГДА (см. task-2-report.md, Fix round 1, п.2).
+// Для продаваемого устройства самолечение перезагрузкой лучше вечно
+// замёрзшего экрана: NVS/WiFi-креды целы, устройство просто перезапустится и
+// вернётся в рабочий режим. Отсюда явная проверка + esp_restart() вместо
+// молчаливого ESP_RETURN_ON_ERROR, как было раньше.
+static void draw_bitmap_fatal(const char *what, esp_err_t err) __attribute__((noreturn));
+static void draw_bitmap_fatal(const char *what, esp_err_t err)
+{
+    ESP_LOGE(TAG, "%s failed after retries (%s) — LVGL flush would hang forever, restarting", what, esp_err_to_name(err));
+    esp_restart();
+}
+
 static esp_err_t panel_co5300_draw_bitmap(esp_lcd_panel_t *panel, int x_start, int y_start, int x_end, int y_end, const void *color_data)
 {
     co5300_panel_t *co5300 = __containerof(panel, co5300_panel_t, base);
@@ -303,20 +321,30 @@ static esp_err_t panel_co5300_draw_bitmap(esp_lcd_panel_t *panel, int x_start, i
     y_start += co5300->y_gap;
     y_end += co5300->y_gap;
 
-    ESP_RETURN_ON_ERROR(tx_param(co5300, io, LCD_CMD_CASET, (uint8_t[]) {
+    esp_err_t ret;
+    ret = tx_param(co5300, io, LCD_CMD_CASET, (uint8_t[]) {
         (x_start >> 8) & 0xFF,
         x_start & 0xFF,
         ((x_end - 1) >> 8) & 0xFF,
         (x_end - 1) & 0xFF,
-    }, 4), TAG, "send command failed");
-    ESP_RETURN_ON_ERROR(tx_param(co5300, io, LCD_CMD_RASET, (uint8_t[]) {
+    }, 4);
+    if (ret != ESP_OK) {
+        draw_bitmap_fatal("CASET", ret);
+    }
+    ret = tx_param(co5300, io, LCD_CMD_RASET, (uint8_t[]) {
         (y_start >> 8) & 0xFF,
         y_start & 0xFF,
         ((y_end - 1) >> 8) & 0xFF,
         (y_end - 1) & 0xFF,
-    }, 4), TAG, "send command failed");
+    }, 4);
+    if (ret != ESP_OK) {
+        draw_bitmap_fatal("RASET", ret);
+    }
     size_t len = (x_end - x_start) * (y_end - y_start) * co5300->fb_bits_per_pixel / 8;
-    tx_color(co5300, io, LCD_CMD_RAMWR, color_data, len);
+    ret = tx_color(co5300, io, LCD_CMD_RAMWR, color_data, len);
+    if (ret != ESP_OK) {
+        draw_bitmap_fatal("RAMWR/tx_color", ret);
+    }
 
     return ESP_OK;
 }

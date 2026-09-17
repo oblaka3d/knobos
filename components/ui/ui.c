@@ -41,7 +41,16 @@ void ui_handle_input(hal_input_event_t ev, void *arg) {
         return;
     }
     const screen_desc_t *scr = s_screens[carousel_current(&s_car)];
-    if (scr->on_input) scr->on_input(ev);
+    // lvgl_port_lock — тот же контракт, что и у LONG-ветки выше: on_input может
+    // трогать LVGL (виджеты) или, как screen_clock, HAL-функции (hal_backlight_set),
+    // которые сами шлют команды панели через общий esp_lcd_panel_io. Без лока
+    // это может встрять между CASET/RASET/RAMWR флаша из задачи LVGL. Текущие
+    // on_input не берут lvgl_port_lock сами — рекурсии нет.
+    if (scr->on_input) {
+        lvgl_port_lock(0);
+        scr->on_input(ev);
+        lvgl_port_unlock();
+    }
 }
 
 void ui_onboarding_show(const char *ap_ssid, const char *ap_pass) {
